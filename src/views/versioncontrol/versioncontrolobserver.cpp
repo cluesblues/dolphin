@@ -15,6 +15,8 @@
 #include <KLocalizedString>
 #include <KService>
 #include <KServiceTypeTrader>
+#include <KPluginLoader>
+#include <KPluginMetaData>
 
 #include <QTimer>
 
@@ -280,24 +282,40 @@ KVersionControlPlugin* VersionControlObserver::searchPlugin(const QUrl& director
         // all fileview version control plugins and remember them in 'plugins'.
         const QStringList enabledPlugins = VersionControlSettings::enabledPlugins();
 
+        const QVector<KPluginMetaData> plugins = KPluginLoader::findPlugins(QStringLiteral("dolphin/vcs"));
+
+        for(const auto &p: plugins) {
+            if(enabledPlugins.contains(p.name())) {
+                KPluginLoader loader(p.fileName());
+                KPluginFactory *factory = loader.factory();
+                KVersionControlPlugin *plugin = factory->create<KVersionControlPlugin>();
+                if (plugin) {
+                    m_plugins.append( qMakePair(plugin, plugin->fileName()) );
+                }
+            }
+        }
+
         const KService::List pluginServices = KServiceTypeTrader::self()->query(QStringLiteral("FileViewVersionControlPlugin"));
         for (KService::List::ConstIterator it = pluginServices.constBegin(); it != pluginServices.constEnd(); ++it) {
             if (enabledPlugins.contains((*it)->name())) {
                 KVersionControlPlugin* plugin = (*it)->createInstance<KVersionControlPlugin>(this);
                 if (plugin) {
-                    connect(plugin, &KVersionControlPlugin::itemVersionsChanged,
-                            this, &VersionControlObserver::silentDirectoryVerification);
-                    connect(plugin, &KVersionControlPlugin::infoMessage,
-                            this, &VersionControlObserver::infoMessage);
-                    connect(plugin, &KVersionControlPlugin::errorMessage,
-                            this, &VersionControlObserver::errorMessage);
-                    connect(plugin, &KVersionControlPlugin::operationCompletedMessage,
-                            this, &VersionControlObserver::operationCompletedMessage);
-
                     m_plugins.append( qMakePair(plugin, plugin->fileName()) );
                 }
             }
         }
+
+        for (auto &plugin : m_plugins) {
+            connect(plugin.first, &KVersionControlPlugin::itemVersionsChanged,
+                this, &VersionControlObserver::silentDirectoryVerification);
+            connect(plugin.first, &KVersionControlPlugin::infoMessage,
+                this, &VersionControlObserver::infoMessage);
+            connect(plugin.first, &KVersionControlPlugin::errorMessage,
+                this, &VersionControlObserver::errorMessage);
+            connect(plugin.first, &KVersionControlPlugin::operationCompletedMessage,
+                this, &VersionControlObserver::operationCompletedMessage);
+        }
+
         m_pluginsInitialized = true;
     }
 
