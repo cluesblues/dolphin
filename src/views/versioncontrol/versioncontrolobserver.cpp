@@ -305,7 +305,7 @@ KVersionControlPlugin* VersionControlObserver::searchPlugin(const QUrl& director
             }
         }
 
-        for (auto &plugin : m_plugins) {
+        for (auto &plugin : qAsConst(m_plugins)) {
             connect(plugin.first, &KVersionControlPlugin::itemVersionsChanged,
                 this, &VersionControlObserver::silentDirectoryVerification);
             connect(plugin.first, &KVersionControlPlugin::infoMessage,
