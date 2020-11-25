@@ -284,7 +284,7 @@ KVersionControlPlugin* VersionControlObserver::searchPlugin(const QUrl& director
 
         const QVector<KPluginMetaData> plugins = KPluginLoader::findPlugins(QStringLiteral("dolphin/vcs"));
 
-        for(const auto &p: plugins) {
+        for (const auto &p : plugins) {
             if (enabledPlugins.contains(p.name())) {
                 KPluginLoader loader(p.fileName());
                 KPluginFactory *factory = loader.factory();
